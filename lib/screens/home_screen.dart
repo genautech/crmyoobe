@@ -68,6 +68,9 @@ class _HomeScreenState extends State<HomeScreen> {
               'assets/images/yoobe_logo.png',
               height: 32,
               width: 32,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(Icons.business_center, size: 32);
+              },
             ),
             const SizedBox(width: 8),
             const Text('Yoobe CRM'),

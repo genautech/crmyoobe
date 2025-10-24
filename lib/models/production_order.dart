@@ -117,10 +117,10 @@ class ProductionOrderItem {
 
   factory ProductionOrderItem.fromJson(Map<String, dynamic> json) {
     return ProductionOrderItem(
-      productId: json['productId'] as String,
-      productName: json['productName'] as String,
-      quantity: json['quantity'] as int,
-      price: (json['price'] as num).toDouble(),
+      productId: json['productId'] as String? ?? '',
+      productName: json['productName'] as String? ?? '',
+      quantity: json['quantity'] as int? ?? 0,
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
       specifications: json['specifications'] as String? ?? '',
       printingDetails: json['printingDetails'] as String? ?? '',
       color: json['color'] as String? ?? '',
@@ -298,33 +298,40 @@ class ProductionOrder extends HiveObject {
 
   factory ProductionOrder.fromJson(Map<String, dynamic> json) {
     return ProductionOrder(
-      id: json['id'] as String,
-      productionOrderNumber: json['productionOrderNumber'] as String,
+      id: json['id'] as String? ?? '',
+      productionOrderNumber: json['productionOrderNumber'] as String? ?? '',
       orderId: json['orderId'] as String? ?? '',
       quoteId: json['quoteId'] as String? ?? '',
-      customerId: json['customerId'] as String,
-      customerName: json['customerName'] as String,
+      customerId: json['customerId'] as String? ?? '',
+      customerName: json['customerName'] as String? ?? '',
       customerCompany: json['customerCompany'] as String? ?? '',
-      items: (json['items'] as List)
-          .map((item) =>
-              ProductionOrderItem.fromJson(item as Map<String, dynamic>))
-          .toList(),
+      items: (json['items'] as List?)
+              ?.map((item) =>
+                  ProductionOrderItem.fromJson(item as Map<String, dynamic>))
+              .toList() ??
+          [],
       status: json['status'] as String? ?? 'ocCriada',
-      productionDate: DateTime.parse(json['productionDate'] as String),
+      productionDate: json['productionDate'] != null
+          ? DateTime.parse(json['productionDate'] as String)
+          : DateTime.now(),
       deliveryDeadline: json['deliveryDeadline'] != null
           ? DateTime.parse(json['deliveryDeadline'] as String)
           : null,
-      dispatchAddress: json['dispatchAddress'] as String,
+      dispatchAddress: json['dispatchAddress'] as String? ?? '',
       dispatchCity: json['dispatchCity'] as String? ?? '',
       dispatchState: json['dispatchState'] as String? ?? '',
       dispatchZipCode: json['dispatchZipCode'] as String? ?? '',
-      totalAmount: (json['totalAmount'] as num).toDouble(),
+      totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0.0,
       supplierName: json['supplierName'] as String? ?? '',
       campaignName: json['campaignName'] as String? ?? '',
       notes: json['notes'] as String? ?? '',
       internalNotes: json['internalNotes'] as String? ?? '',
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : DateTime.now(),
       sampleRequestDate: json['sampleRequestDate'] != null
           ? DateTime.parse(json['sampleRequestDate'] as String)
           : null,
