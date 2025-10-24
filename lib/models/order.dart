@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'quote.dart';
 
 part 'order.g.dart';
 
@@ -93,6 +94,18 @@ class Order extends HiveObject {
   @HiveField(12)
   String supplierName;
 
+  @HiveField(13)
+  String nfFornecedor;
+
+  @HiveField(14)
+  String nfVenda;
+
+  @HiveField(15)
+  String paymentLink;
+
+  @HiveField(16)
+  String quoteId;
+
   Order({
     required this.id,
     required this.customerId,
@@ -105,6 +118,10 @@ class Order extends HiveObject {
     this.notes = '',
     this.campaignName = '',
     this.supplierName = '',
+    this.nfFornecedor = '',
+    this.nfVenda = '',
+    this.paymentLink = '',
+    this.quoteId = '',
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : orderDate = orderDate ?? DateTime.now(),
@@ -129,6 +146,10 @@ class Order extends HiveObject {
       'notes': notes,
       'campaignName': campaignName,
       'supplierName': supplierName,
+      'nfFornecedor': nfFornecedor,
+      'nfVenda': nfVenda,
+      'paymentLink': paymentLink,
+      'quoteId': quoteId,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -151,8 +172,32 @@ class Order extends HiveObject {
       notes: json['notes'] as String? ?? '',
       campaignName: json['campaignName'] as String? ?? '',
       supplierName: json['supplierName'] as String? ?? '',
+      nfFornecedor: json['nfFornecedor'] as String? ?? '',
+      nfVenda: json['nfVenda'] as String? ?? '',
+      paymentLink: json['paymentLink'] as String? ?? '',
+      quoteId: json['quoteId'] as String? ?? '',
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
+    );
+  }
+
+  // Factory para criar Order a partir de Quote aprovado
+  factory Order.fromQuote(Quote quote) {
+    return Order(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      customerId: quote.customerId,
+      customerName: quote.customerName,
+      items: quote.items.map((quoteItem) => OrderItem(
+        productId: quoteItem.productId,
+        productName: quoteItem.productName,
+        quantity: quoteItem.quantity,
+        price: quoteItem.unitPrice - (quoteItem.unitPrice * quoteItem.discount / 100),
+      )).toList(),
+      status: 'pending',
+      orderDate: DateTime.now(),
+      totalAmount: quote.total,
+      notes: quote.notes,
+      quoteId: quote.id,
     );
   }
 }

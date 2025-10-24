@@ -71,6 +71,10 @@ class OrderAdapter extends TypeAdapter<Order> {
       notes: fields[8] as String,
       campaignName: fields[11] as String,
       supplierName: fields[12] as String,
+      nfFornecedor: fields[13] as String,
+      nfVenda: fields[14] as String,
+      paymentLink: fields[15] as String,
+      quoteId: fields[16] as String,
       createdAt: fields[9] as DateTime?,
       updatedAt: fields[10] as DateTime?,
     );
@@ -79,7 +83,7 @@ class OrderAdapter extends TypeAdapter<Order> {
   @override
   void write(BinaryWriter writer, Order obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(17)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -105,7 +109,15 @@ class OrderAdapter extends TypeAdapter<Order> {
       ..writeByte(11)
       ..write(obj.campaignName)
       ..writeByte(12)
-      ..write(obj.supplierName);
+      ..write(obj.supplierName)
+      ..writeByte(13)
+      ..write(obj.nfFornecedor)
+      ..writeByte(14)
+      ..write(obj.nfVenda)
+      ..writeByte(15)
+      ..write(obj.paymentLink)
+      ..writeByte(16)
+      ..write(obj.quoteId);
   }
 
   @override

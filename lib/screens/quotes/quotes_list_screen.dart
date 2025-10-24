@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/quote_provider.dart';
 import 'quote_form_screen.dart';
+import 'quote_detail_screen.dart';
 
 class QuotesListScreen extends StatelessWidget {
   const QuotesListScreen({super.key});
@@ -37,7 +38,7 @@ class QuotesListScreen extends StatelessWidget {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => QuoteFormScreen(quote: quote)),
+                          MaterialPageRoute(builder: (context) => QuoteDetailScreen(quote: quote)),
                         );
                       },
                       borderRadius: BorderRadius.circular(16),

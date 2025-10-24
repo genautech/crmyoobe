@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../../models/order.dart';
 import '../../models/customer.dart';
 import '../../models/product.dart';
+import '../../models/production_order.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/customer_provider.dart';
 import '../../providers/product_provider.dart';
+import '../../providers/production_order_provider.dart';
 import '../customers/quick_customer_dialog.dart';
 import '../products/quick_product_dialog.dart';
 
@@ -510,6 +511,27 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
                 ),
               ),
             ),
+            
+            // Botão Enviar para Produção (apenas para pedidos existentes)
+            if (widget.order != null) ...[
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () => _sendToProduction(context),
+                icon: const Icon(Icons.factory, size: 24),
+                label: const Text(
+                  'Enviar para Produção',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -989,5 +1011,113 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _sendToProduction(BuildContext context) async {
+    if (_selectedCustomer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ Cliente não encontrado'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Enviar para Produção'),
+        content: const Text(
+          'Deseja criar uma ordem de produção para este pedido?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Enviar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      // Create order from current form data
+      final order = Order(
+        id: widget.order?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        customerId: _selectedCustomer!.id,
+        customerName: _selectedCustomer!.name,
+        items: _items,
+        status: _status,
+        deliveryDate: _deliveryDate,
+        notes: _notesController.text,
+        campaignName: _campaignNameController.text.trim(),
+        supplierName: _supplierNameController.text.trim(),
+        createdAt: widget.order?.createdAt ?? DateTime.now(),
+      );
+
+      // Save/update order first
+      if (widget.order == null) {
+        await context.read<OrderProvider>().addOrder(order);
+      } else {
+        await context.read<OrderProvider>().updateOrder(order);
+      }
+
+      // Create production order from order
+      final productionOrder = ProductionOrder.fromOrder(
+        order,
+        _selectedCustomer!.company,
+        _selectedCustomer!.address,
+      );
+
+      // Save production order
+      await context.read<ProductionOrderProvider>().addProductionOrder(productionOrder);
+
+      if (!context.mounted) return;
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.factory, color: Colors.white),
+              SizedBox(width: 12),
+              Expanded(child: Text('Ordem de produção criada com sucesso!')),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
+        ),
+      );
+
+      // Navigate back
+      Navigator.pop(context);
+    } catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(child: Text('Erro ao criar ordem de produção: $e')),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
   }
 }
