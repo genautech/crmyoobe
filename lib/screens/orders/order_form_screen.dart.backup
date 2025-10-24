@@ -1,0 +1,214 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../models/order.dart';
+import '../../models/customer.dart';
+import '../../models/product.dart';
+import '../../providers/order_provider.dart';
+import '../../providers/customer_provider.dart';
+import '../../providers/product_provider.dart';
+
+class OrderFormScreen extends StatefulWidget {
+  final Order? order;
+
+  const OrderFormScreen({super.key, this.order});
+
+  @override
+  State<OrderFormScreen> createState() => _OrderFormScreenState();
+}
+
+class _OrderFormScreenState extends State<OrderFormScreen> {
+  Customer? _selectedCustomer;
+  List<OrderItem> _items = [];
+  String _status = 'pending';
+  late TextEditingController _notesController;
+
+  @override
+  void initState() {
+    super.initState();
+    _notesController = TextEditingController(text: widget.order?.notes ?? '');
+    
+    if (widget.order != null) {
+      _items = List.from(widget.order!.items);
+      _status = widget.order!.status;
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final customer = context.read<CustomerProvider>().getCustomer(widget.order!.customerId);
+        setState(() => _selectedCustomer = customer);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final customers = context.watch<CustomerProvider>().customers;
+    final products = context.watch<ProductProvider>().products;
+
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.order == null ? 'Novo Pedido' : 'Editar Pedido')),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            DropdownButtonFormField<Customer>(
+              value: _selectedCustomer,
+              decoration: const InputDecoration(labelText: 'Cliente *', border: OutlineInputBorder()),
+              items: customers.map((c) => DropdownMenuItem(value: c, child: Text(c.name))).toList(),
+              onChanged: (c) => setState(() => _selectedCustomer = c),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _status,
+              decoration: const InputDecoration(labelText: 'Status', border: OutlineInputBorder()),
+              items: const [
+                DropdownMenuItem(value: 'pending', child: Text('Pendente')),
+                DropdownMenuItem(value: 'processing', child: Text('Processando')),
+                DropdownMenuItem(value: 'shipped', child: Text('Enviado')),
+                DropdownMenuItem(value: 'delivered', child: Text('Entregue')),
+                DropdownMenuItem(value: 'cancelled', child: Text('Cancelado')),
+              ],
+              onChanged: (v) => setState(() => _status = v!),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Itens do Pedido', style: Theme.of(context).textTheme.titleLarge),
+                TextButton.icon(
+                  icon: const Icon(Icons.add),
+                  label: const Text('Adicionar'),
+                  onPressed: () => _showAddItemDialog(products),
+                ),
+              ],
+            ),
+            ..._items.map((item) => Card(
+              child: ListTile(
+                title: Text(item.productName),
+                subtitle: Text('Qtd: ${item.quantity} × R\$ ${item.price.toStringAsFixed(2)}'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('R\$ ${item.total.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () => setState(() => _items.remove(item)),
+                    ),
+                  ],
+                ),
+              ),
+            )),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _notesController,
+              decoration: const InputDecoration(labelText: 'Observações', border: OutlineInputBorder()),
+              maxLines: 3,
+            ),
+            const SizedBox(height: 16),
+            Card(
+              color: Colors.blue.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Total:', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text(
+                      'R\$ ${_items.fold(0.0, (sum, item) => sum + item.total).toStringAsFixed(2)}',
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blue),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _saveOrder,
+              style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16)),
+              child: Text(widget.order == null ? 'Criar Pedido' : 'Salvar', style: const TextStyle(fontSize: 16)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddItemDialog(List<Product> products) {
+    Product? selectedProduct;
+    int quantity = 1;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Adicionar Item'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<Product>(
+                value: selectedProduct,
+                decoration: const InputDecoration(labelText: 'Produto', border: OutlineInputBorder()),
+                items: products.map((p) => DropdownMenuItem(value: p, child: Text(p.name))).toList(),
+                onChanged: (p) => setDialogState(() => selectedProduct = p),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                initialValue: '1',
+                decoration: const InputDecoration(labelText: 'Quantidade', border: OutlineInputBorder()),
+                keyboardType: TextInputType.number,
+                onChanged: (v) => quantity = int.tryParse(v) ?? 1,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+            TextButton(
+              onPressed: () {
+                if (selectedProduct != null) {
+                  setState(() {
+                    _items.add(OrderItem(
+                      productId: selectedProduct!.id,
+                      productName: selectedProduct!.name,
+                      quantity: quantity,
+                      price: selectedProduct!.price,
+                    ));
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Adicionar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _saveOrder() {
+    if (_selectedCustomer == null || _items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecione um cliente e adicione itens')),
+      );
+      return;
+    }
+
+    final order = Order(
+      id: widget.order?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      customerId: _selectedCustomer!.id,
+      customerName: _selectedCustomer!.name,
+      items: _items,
+      status: _status,
+      notes: _notesController.text,
+      createdAt: widget.order?.createdAt ?? DateTime.now(),
+    );
+
+    if (widget.order == null) {
+      context.read<OrderProvider>().addOrder(order);
+    } else {
+      context.read<OrderProvider>().updateOrder(order);
+    }
+
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(widget.order == null ? 'Pedido criado' : 'Pedido atualizado')),
+    );
+  }
+}
