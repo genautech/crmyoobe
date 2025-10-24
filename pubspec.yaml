@@ -59,9 +59,6 @@ dependencies:
   pdf: ^3.11.1
   printing: ^5.13.4
   
-  # Splash screen
-  flutter_native_splash: ^2.4.1
-  
   # Firebase packages (LOCKED versions for Flutter 3.35.4 compatibility)
   firebase_core: 3.6.0               # Firebase Core SDK
   cloud_firestore: 5.4.3             # Firestore Database
@@ -99,21 +96,6 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/yoobe_logo.png
-
-# Splash Screen Configuration
-flutter_native_splash:
-  color: "#6366F1"  # Primary indigo color
-  image: assets/images/yoobe_logo.png
-  color_dark: "#1E1B4B"  # Dark indigo for dark mode
-  image_dark: assets/images/yoobe_logo.png
-  
-  android_12:
-    image: assets/images/yoobe_logo.png
-    icon_background_color: "#6366F1"
-    
-  web: true
-  android: true
-  ios: true
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -79,7 +79,7 @@ class _SplashScreenState extends State<SplashScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo Container
+                  // Yoobe Logo Container
                   Container(
                     padding: const EdgeInsets.all(30),
                     decoration: BoxDecoration(
@@ -93,10 +93,21 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.business_center_rounded,
-                      size: 80,
-                      color: Color(0xFF6366F1),
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/yoobe_logo.png',
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          // Fallback to icon if image fails to load
+                          return const Icon(
+                            Icons.business_center_rounded,
+                            size: 80,
+                            color: Color(0xFF6366F1),
+                          );
+                        },
+                      ),
                     ),
                   ),
                   const SizedBox(height: 32),
