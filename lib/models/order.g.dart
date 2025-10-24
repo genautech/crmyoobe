@@ -21,13 +21,14 @@ class OrderItemAdapter extends TypeAdapter<OrderItem> {
       productName: fields[1] as String,
       quantity: fields[2] as int,
       price: fields[3] as double,
+      supplier: fields[4] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, OrderItem obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.productId)
       ..writeByte(1)
@@ -35,7 +36,9 @@ class OrderItemAdapter extends TypeAdapter<OrderItem> {
       ..writeByte(2)
       ..write(obj.quantity)
       ..writeByte(3)
-      ..write(obj.price);
+      ..write(obj.price)
+      ..writeByte(4)
+      ..write(obj.supplier);
   }
 
   @override

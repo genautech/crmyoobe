@@ -6,12 +6,14 @@ import '../providers/task_provider.dart';
 import '../providers/order_provider.dart';
 import '../providers/quote_provider.dart';
 import '../providers/production_order_provider.dart';
+import '../providers/supplier_provider.dart';
 import 'customers/customers_list_screen.dart';
 import 'tasks/tasks_list_screen.dart';
 import 'orders/orders_list_screen.dart';
 import 'quotes/quotes_list_screen.dart';
 import 'products/products_list_screen.dart';
 import 'production/production_orders_list_screen.dart';
+import 'suppliers/suppliers_list_screen.dart';
 import 'notifications_screen.dart';
 import 'settings_screen.dart';
 import 'help_screen.dart';
@@ -34,13 +36,43 @@ class _HomeScreenState extends State<HomeScreen> {
     const QuotesListScreen(),
     const ProductsListScreen(),
     const ProductionOrdersListScreen(),
+    const SuppliersListScreen(),
   ];
+
+  int _getDeadlineAlertCount() {
+    final productionProvider = context.watch<ProductionOrderProvider>();
+    final orders = productionProvider.productionOrders;
+    final now = DateTime.now();
+    
+    int count = 0;
+    for (final order in orders) {
+      if (order.deliveryDeadline != null && order.status != 'produtoDespachado') {
+        final daysUntil = order.deliveryDeadline!.difference(now).inDays;
+        if (daysUntil <= 7) { // Alert for orders within 7 days or overdue
+          count++;
+        }
+      }
+    }
+    return count;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final alertCount = _getDeadlineAlertCount();
+    
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Yoobe CRM'),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/images/yoobe_logo.png',
+              height: 32,
+              width: 32,
+            ),
+            const SizedBox(width: 8),
+            const Text('Yoobe CRM'),
+          ],
+        ),
         elevation: 2,
         actions: [
           IconButton(
@@ -56,7 +88,13 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.notifications_outlined),
+            icon: Badge(
+              isLabelVisible: alertCount > 0,
+              label: Text(alertCount.toString()),
+              backgroundColor: Colors.red,
+              child: const Icon(Icons.notifications_outlined),
+            ),
+            tooltip: alertCount > 0 ? '$alertCount alertas de prazo' : 'Notificações',
             onPressed: () {
               Navigator.push(
                 context,
@@ -122,6 +160,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.precision_manufacturing_outlined),
             selectedIcon: Icon(Icons.precision_manufacturing),
             label: 'Produção',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.factory_outlined),
+            selectedIcon: Icon(Icons.factory),
+            label: 'Produtores',
           ),
         ],
       ),

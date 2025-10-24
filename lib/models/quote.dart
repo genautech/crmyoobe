@@ -30,6 +30,9 @@ class QuoteItem {
   @HiveField(5)
   double discount;
 
+  @HiveField(6)
+  String supplier;
+
   QuoteItem({
     required this.productId,
     required this.productName,
@@ -37,6 +40,7 @@ class QuoteItem {
     required this.quantity,
     required this.unitPrice,
     this.discount = 0.0,
+    this.supplier = '',
   });
 
   double get subtotal => quantity * unitPrice;
@@ -51,6 +55,7 @@ class QuoteItem {
       'quantity': quantity,
       'unitPrice': unitPrice,
       'discount': discount,
+      'supplier': supplier,
     };
   }
 
@@ -62,6 +67,7 @@ class QuoteItem {
       quantity: json['quantity'] as int,
       unitPrice: (json['unitPrice'] as num).toDouble(),
       discount: (json['discount'] as num?)?.toDouble() ?? 0.0,
+      supplier: json['supplier'] as String? ?? '',
     );
   }
 }

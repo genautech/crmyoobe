@@ -3,7 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../models/quote.dart';
 import '../../models/order.dart';
+import '../../models/production_order.dart';
 import '../../providers/order_provider.dart';
+import '../../providers/customer_provider.dart';
+import '../../providers/production_order_provider.dart';
 import 'quote_form_screen.dart';
 
 class QuoteDetailScreen extends StatelessWidget {
@@ -221,6 +224,9 @@ class QuoteDetailScreen extends StatelessWidget {
                   ),
                 ),
 
+              // Multi-Supplier Production Order Creation
+              if (isApproved) ..._buildMultiSupplierProductionButtons(context),
+
               const SizedBox(height: 80),
             ],
           ),
@@ -278,12 +284,44 @@ class QuoteDetailScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item.productName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.productName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                    if (item.supplier.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.local_shipping, size: 12, color: Colors.blue.shade700),
+                            const SizedBox(width: 4),
+                            Text(
+                              item.supplier,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.blue.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 if (item.description.isNotEmpty) ...[
                   const SizedBox(height: 4),
@@ -414,6 +452,186 @@ class QuoteDetailScreen extends StatelessWidget {
         return 'Cliente não decidiu';
       default:
         return status;
+    }
+  }
+
+  List<Widget> _buildMultiSupplierProductionButtons(BuildContext context) {
+    // Get unique suppliers from quote items
+    final suppliers = quote.items
+        .where((item) => item.supplier.isNotEmpty)
+        .map((item) => item.supplier)
+        .toSet()
+        .toList();
+
+    if (suppliers.isEmpty) return [];
+
+    return [
+      const SizedBox(height: 16),
+      Card(
+        elevation: 3,
+        color: Colors.orange.shade50,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.factory, color: Colors.orange.shade700),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Criar Ordens de Produção por Fornecedor',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Este orçamento tem ${suppliers.length} fornecedor${suppliers.length > 1 ? 'es' : ''}. Crie ordens de produção separadas:',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+              ),
+              const SizedBox(height: 12),
+              ...suppliers.map((supplier) {
+                final supplierItems = quote.items
+                    .where((item) => item.supplier == supplier)
+                    .toList();
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: ElevatedButton.icon(
+                    onPressed: () => _createProductionOrderForSupplier(context, supplier),
+                    icon: const Icon(Icons.local_shipping, size: 18),
+                    label: Text(
+                      '$supplier (${supplierItems.length} ${supplierItems.length == 1 ? 'item' : 'itens'})',
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 44),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    ];
+  }
+
+  Future<void> _createProductionOrderForSupplier(BuildContext context, String supplier) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Criar Ordem de Produção'),
+        content: Text(
+          'Criar ordem de produção para fornecedor "$supplier"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Criar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      // Get customer data
+      final customerProvider = context.read<CustomerProvider>();
+      final customer = customerProvider.getCustomer(quote.customerId);
+      
+      if (customer == null) {
+        throw Exception('Cliente não encontrado');
+      }
+
+      // Filter items by supplier
+      final supplierItems = quote.items
+          .where((item) => item.supplier == supplier)
+          .toList();
+
+      // Create order from quote (will be used to create production order)
+      final order = Order.fromQuote(quote);
+      
+      // Filter order items by supplier
+      final filteredOrderItems = order.items
+          .where((item) => item.supplier == supplier)
+          .toList();
+      
+      // Create a temporary order with only supplier items
+      final supplierOrder = Order(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        customerId: order.customerId,
+        customerName: order.customerName,
+        items: filteredOrderItems,
+        status: order.status,
+        deliveryDate: order.deliveryDate,
+        notes: order.notes,
+        campaignName: order.campaignName,
+        supplierName: supplier,
+        quoteId: quote.id,
+        createdAt: DateTime.now(),
+      );
+
+      // Create production order from supplier-specific order
+      final productionOrder = ProductionOrder.fromOrder(
+        supplierOrder,
+        customer.company,
+        customer.address,
+      );
+
+      // Save production order
+      await context.read<ProductionOrderProvider>().addProductionOrder(productionOrder);
+
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.factory, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text('Ordem de produção criada para $supplier!'),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(child: Text('Erro ao criar ordem: $e')),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
     }
   }
 

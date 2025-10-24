@@ -16,6 +16,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _language = 'pt_BR';
   String _companyName = 'Yoobe CRM';
   String _companyPhone = '+55 41 93618-3128';
+  String _companyEmail = 'contato@yoobe.com.br';
 
   @override
   void initState() {
@@ -32,6 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _language = prefs.getString('language') ?? 'pt_BR';
       _companyName = prefs.getString('company_name') ?? 'Yoobe CRM';
       _companyPhone = prefs.getString('company_phone') ?? '+55 41 93618-3128';
+      _companyEmail = prefs.getString('company_email') ?? 'contato@yoobe.com.br';
     });
   }
 
@@ -132,6 +134,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   setState(() => _companyPhone = value);
                   _saveSetting('company_phone', value);
                 },
+              ),
+            ),
+            _buildListTile(
+              icon: Icons.email_rounded,
+              title: 'Email da Empresa',
+              subtitle: _companyEmail,
+              onTap: () => _showEditDialog(
+                'Email da Empresa',
+                _companyEmail,
+                (value) {
+                  setState(() => _companyEmail = value);
+                  _saveSetting('company_email', value);
+                },
+                isEmail: true,
               ),
             ),
           ]),
@@ -399,7 +415,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showEditDialog(String title, String initialValue, Function(String) onSave) {
+  void _showEditDialog(String title, String initialValue, Function(String) onSave, {bool isEmail = false}) {
     final controller = TextEditingController(text: initialValue);
     
     showDialog(
@@ -408,9 +424,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: Text(title),
         content: TextField(
           controller: controller,
+          keyboardType: isEmail ? TextInputType.emailAddress : TextInputType.text,
           decoration: InputDecoration(
             labelText: title,
             border: const OutlineInputBorder(),
+            hintText: isEmail ? 'exemplo@empresa.com' : null,
           ),
         ),
         actions: [

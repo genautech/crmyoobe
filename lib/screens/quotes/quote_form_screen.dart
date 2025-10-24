@@ -215,7 +215,35 @@ class _QuoteFormScreenState extends State<QuoteFormScreen> {
             ),
             ..._items.map((item) => Card(
               child: ListTile(
-                title: Text(item.productName),
+                title: Row(
+                  children: [
+                    Expanded(child: Text(item.productName)),
+                    if (item.supplier.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.local_shipping, size: 10, color: Colors.blue.shade700),
+                            const SizedBox(width: 3),
+                            Text(
+                              item.supplier,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.blue.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
                 subtitle: Text(
                   'Qtd: ${item.quantity} × R\$ ${item.unitPrice.toStringAsFixed(2)}'
                   '${item.discount > 0 ? ' (${item.discount}% desc)' : ''}',
@@ -391,6 +419,7 @@ class _QuoteFormScreenState extends State<QuoteFormScreen> {
                       quantity: quantity,
                       unitPrice: selectedProduct!.price,
                       discount: discount,
+                      supplier: selectedProduct!.supplier,  // NEW - preserve supplier from product
                     ));
                   });
                   Navigator.pop(context);

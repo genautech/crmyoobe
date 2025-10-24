@@ -25,11 +25,15 @@ class OrderItem {
   @HiveField(3)
   double price;
 
+  @HiveField(4)
+  String supplier;
+
   OrderItem({
     required this.productId,
     required this.productName,
     required this.quantity,
     required this.price,
+    this.supplier = '',
   });
 
   double get total => quantity * price;
@@ -40,6 +44,7 @@ class OrderItem {
       'productName': productName,
       'quantity': quantity,
       'price': price,
+      'supplier': supplier,
     };
   }
 
@@ -49,6 +54,7 @@ class OrderItem {
       productName: json['productName'] as String,
       quantity: json['quantity'] as int,
       price: (json['price'] as num).toDouble(),
+      supplier: json['supplier'] as String? ?? '',
     );
   }
 }
@@ -192,6 +198,7 @@ class Order extends HiveObject {
         productName: quoteItem.productName,
         quantity: quoteItem.quantity,
         price: quoteItem.unitPrice - (quoteItem.unitPrice * quoteItem.discount / 100),
+        supplier: quoteItem.supplier,
       )).toList(),
       status: 'pending',
       orderDate: DateTime.now(),
@@ -199,5 +206,20 @@ class Order extends HiveObject {
       notes: quote.notes,
       quoteId: quote.id,
     );
+  }
+
+  // Obter lista de suppliers únicos no pedido
+  List<String> get uniqueSuppliers {
+    final suppliers = items
+        .where((item) => item.supplier.isNotEmpty)
+        .map((item) => item.supplier)
+        .toSet()
+        .toList();
+    return suppliers;
+  }
+
+  // Obter itens por supplier
+  List<OrderItem> getItemsBySupplier(String supplier) {
+    return items.where((item) => item.supplier == supplier).toList();
   }
 }

@@ -10,8 +10,10 @@ import 'providers/order_provider.dart';
 import 'providers/quote_provider.dart';
 import 'providers/product_provider.dart';
 import 'providers/production_order_provider.dart';
+import 'providers/supplier_provider.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/production/production_dashboard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,10 +59,14 @@ class _MyAppState extends State<MyApp> {
         ChangeNotifierProvider(create: (_) => QuoteProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => ProductionOrderProvider()),
+        ChangeNotifierProvider(create: (_) => SupplierProvider()),
       ],
       child: MaterialApp(
         title: 'Yoobe CRM',
         debugShowCheckedModeBanner: false,
+        routes: {
+          '/production_dashboard': (context) => const ProductionDashboardScreen(),
+        },
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF6366F1), // Indigo/Purple modern

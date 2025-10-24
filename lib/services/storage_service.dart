@@ -5,6 +5,7 @@ import '../models/order.dart';
 import '../models/quote.dart';
 import '../models/product.dart';
 import '../models/production_order.dart';
+import '../models/supplier.dart';
 
 class StorageService {
   static const String customersBox = 'customers';
@@ -13,6 +14,7 @@ class StorageService {
   static const String quotesBox = 'quotes';
   static const String productsBox = 'products';
   static const String productionOrdersBox = 'productionOrders';
+  static const String suppliersBox = 'suppliers';
 
   static Future<void> init() async {
     await Hive.initFlutter();
@@ -46,6 +48,9 @@ class StorageService {
     if (!Hive.isAdapterRegistered(13)) {
       Hive.registerAdapter(OrderAdapter());
     }
+    if (!Hive.isAdapterRegistered(14)) {
+      Hive.registerAdapter(SupplierAdapter());
+    }
 
     // Open boxes with error handling for corrupted data
     await Hive.openBox<Customer>(customersBox);
@@ -53,6 +58,7 @@ class StorageService {
     await Hive.openBox<Quote>(quotesBox);
     await Hive.openBox<Product>(productsBox);
     await Hive.openBox<ProductionOrder>(productionOrdersBox);
+    await Hive.openBox<Supplier>(suppliersBox);
     
     // Orders box needs special handling due to schema migration
     try {
@@ -263,6 +269,7 @@ class StorageService {
   static Box<Order> getOrdersBox() => Hive.box<Order>(ordersBox);
   static Box<Quote> getQuotesBox() => Hive.box<Quote>(quotesBox);
   static Box<Product> getProductsBox() => Hive.box<Product>(productsBox);
+  static Box<Supplier> getSuppliersBox() => Hive.box<Supplier>(suppliersBox);
   static Future<Box<ProductionOrder>> getProductionOrderBox() async {
     if (Hive.isBoxOpen(productionOrdersBox)) {
       return Hive.box<ProductionOrder>(productionOrdersBox);

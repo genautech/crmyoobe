@@ -283,9 +283,39 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
                                 ),
                               ),
                             ),
-                            title: Text(
-                              item.productName,
-                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            title: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    item.productName,
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                                if (item.supplier.isNotEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.local_shipping, size: 10, color: Colors.blue.shade700),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          item.supplier,
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.blue.shade700,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
                             ),
                             subtitle: Text(
                               'Qtd: ${item.quantity} × R\$ ${item.price.toStringAsFixed(2)}',
@@ -552,26 +582,8 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
               ),
             ),
             
-            // Botão Enviar para Produção (apenas para pedidos existentes)
-            if (widget.order != null) ...[
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: () => _sendToProduction(context),
-                icon: const Icon(Icons.factory, size: 24),
-                label: const Text(
-                  'Enviar para Produção',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.all(16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ],
+            // Botões de Enviar para Produção por Fornecedor (apenas para pedidos existentes)
+            if (widget.order != null && _items.isNotEmpty) ..._buildMultiSupplierProductionButtons(),
           ],
         ),
       ),
@@ -815,6 +827,7 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
                           productName: selectedProduct!.name,
                           quantity: quantity,
                           price: selectedProduct!.price,
+                          supplier: selectedProduct!.supplier,  // NEW - preserve supplier from product
                         ));
                       });
                       Navigator.pop(context);
@@ -930,6 +943,7 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
                     productName: product.name,
                     quantity: quantity,
                     price: product.price,
+                    supplier: product.supplier,  // NEW - preserve supplier from product
                   ));
                 });
                 Navigator.pop(context);
@@ -1055,6 +1069,204 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
         ],
       ),
     );
+  }
+
+  List<Widget> _buildMultiSupplierProductionButtons() {
+    // Get unique suppliers from order items
+    final suppliers = _items
+        .where((item) => item.supplier.isNotEmpty)
+        .map((item) => item.supplier)
+        .toSet()
+        .toList();
+
+    if (suppliers.isEmpty) {
+      // Fallback to single production button if no suppliers
+      return [
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          onPressed: () => _sendToProduction(context),
+          icon: const Icon(Icons.factory, size: 24),
+          label: const Text(
+            'Enviar para Produção',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+      ];
+    }
+
+    return [
+      const SizedBox(height: 12),
+      Card(
+        elevation: 3,
+        color: Colors.orange.shade50,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.factory, color: Colors.orange.shade700),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Criar Ordens de Produção por Fornecedor',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Este pedido tem ${suppliers.length} fornecedor${suppliers.length > 1 ? 'es' : ''}. Crie ordens de produção separadas:',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+              ),
+              const SizedBox(height: 12),
+              ...suppliers.map((supplier) {
+                final supplierItems = _items
+                    .where((item) => item.supplier == supplier)
+                    .toList();
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: ElevatedButton.icon(
+                    onPressed: () => _createProductionOrderForSupplier(supplier),
+                    icon: const Icon(Icons.local_shipping, size: 18),
+                    label: Text(
+                      '$supplier (${supplierItems.length} ${supplierItems.length == 1 ? 'item' : 'itens'})',
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 44),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    ];
+  }
+
+  Future<void> _createProductionOrderForSupplier(String supplier) async {
+    if (_selectedCustomer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ Cliente não encontrado'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Criar Ordem de Produção'),
+        content: Text(
+          'Criar ordem de produção para fornecedor "$supplier"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Criar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      // Filter items by supplier
+      final supplierItems = _items
+          .where((item) => item.supplier == supplier)
+          .toList();
+
+      // Create order with supplier-specific items
+      final order = Order(
+        id: widget.order?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        customerId: _selectedCustomer!.id,
+        customerName: _selectedCustomer!.name,
+        items: supplierItems,  // Only items for this supplier
+        status: _status,
+        deliveryDate: _deliveryDate,
+        notes: _notesController.text,
+        campaignName: _campaignNameController.text.trim(),
+        supplierName: supplier,  // Set supplier name
+        nfFornecedor: _nfFornecedorController.text.trim(),
+        nfVenda: _nfVendaController.text.trim(),
+        paymentLink: _paymentLinkController.text.trim(),
+        quoteId: widget.order?.quoteId ?? '',
+        createdAt: widget.order?.createdAt ?? DateTime.now(),
+      );
+
+      // Create production order from supplier-specific order
+      final productionOrder = ProductionOrder.fromOrder(
+        order,
+        _selectedCustomer!.company,
+        _selectedCustomer!.address,
+      );
+
+      // Save production order
+      await context.read<ProductionOrderProvider>().addProductionOrder(productionOrder);
+
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.factory, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text('Ordem de produção criada para $supplier!'),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(child: Text('Erro ao criar ordem de produção: $e')),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
   }
 
   Future<void> _sendToProduction(BuildContext context) async {

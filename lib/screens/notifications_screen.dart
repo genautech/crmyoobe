@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/task_provider.dart';
 import '../providers/order_provider.dart';
 import '../providers/quote_provider.dart';
+import '../providers/production_order_provider.dart';
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
@@ -13,9 +14,15 @@ class NotificationsScreen extends StatelessWidget {
     final taskProvider = context.watch<TaskProvider>();
     final orderProvider = context.watch<OrderProvider>();
     final quoteProvider = context.watch<QuoteProvider>();
+    final productionProvider = context.watch<ProductionOrderProvider>();
 
     // Generate notifications
-    final notifications = _generateNotifications(taskProvider, orderProvider, quoteProvider);
+    final notifications = _generateNotifications(
+      taskProvider, 
+      orderProvider, 
+      quoteProvider,
+      productionProvider,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -97,6 +104,7 @@ class NotificationsScreen extends StatelessWidget {
     TaskProvider taskProvider,
     OrderProvider orderProvider,
     QuoteProvider quoteProvider,
+    ProductionOrderProvider productionProvider,
   ) {
     final notifications = <NotificationItem>[];
     final now = DateTime.now();
@@ -197,6 +205,60 @@ class NotificationsScreen extends StatelessWidget {
       ));
     }
 
+    // Ordens de produção atrasadas
+    final productionOrders = productionProvider.productionOrders;
+    for (var order in productionOrders) {
+      if (order.deliveryDeadline != null && order.status != 'produtoDespachado') {
+        final daysUntil = order.deliveryDeadline!.difference(now).inDays;
+        
+        if (daysUntil < 0) {
+          // Atrasadas
+          notifications.add(NotificationItem(
+            type: NotificationType.productionOverdue,
+            title: 'Produção Atrasada! ⚠️',
+            message: 'OP ${order.productionOrderNumber} - ${order.customerName} está ${daysUntil.abs()} ${daysUntil.abs() == 1 ? 'dia' : 'dias'} atrasada',
+            time: order.deliveryDeadline!,
+            icon: Icons.error_rounded,
+            color: Colors.red,
+            priority: 3,
+          ));
+        } else if (daysUntil == 0) {
+          // Vence hoje
+          notifications.add(NotificationItem(
+            type: NotificationType.productionToday,
+            title: 'Produção Vence Hoje! 🔥',
+            message: 'OP ${order.productionOrderNumber} - ${order.customerName} deve ser entregue hoje',
+            time: order.deliveryDeadline!,
+            icon: Icons.warning_amber_rounded,
+            color: Colors.orange,
+            priority: 3,
+          ));
+        } else if (daysUntil <= 3) {
+          // Urgente (≤3 dias)
+          notifications.add(NotificationItem(
+            type: NotificationType.productionUrgent,
+            title: 'Produção Urgente!',
+            message: 'OP ${order.productionOrderNumber} - ${order.customerName} vence em $daysUntil ${daysUntil == 1 ? 'dia' : 'dias'}',
+            time: order.deliveryDeadline!,
+            icon: Icons.priority_high_rounded,
+            color: Colors.deepOrange,
+            priority: 2,
+          ));
+        } else if (daysUntil <= 7) {
+          // Próximas (4-7 dias)
+          notifications.add(NotificationItem(
+            type: NotificationType.productionApproaching,
+            title: 'Prazo de Produção Próximo',
+            message: 'OP ${order.productionOrderNumber} - ${order.customerName} vence em $daysUntil dias',
+            time: order.deliveryDeadline!,
+            icon: Icons.info_rounded,
+            color: Colors.blue,
+            priority: 1,
+          ));
+        }
+      }
+    }
+
     // Ordenar por prioridade e depois por data
     notifications.sort((a, b) {
       final priorityCompare = b.priority.compareTo(a.priority);
@@ -215,6 +277,10 @@ enum NotificationType {
   quoteExpiring,
   quoteApproved,
   orderProcessing,
+  productionOverdue,
+  productionToday,
+  productionUrgent,
+  productionApproaching,
 }
 
 class NotificationItem {

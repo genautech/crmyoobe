@@ -23,13 +23,14 @@ class QuoteItemAdapter extends TypeAdapter<QuoteItem> {
       quantity: fields[3] as int,
       unitPrice: fields[4] as double,
       discount: fields[5] as double,
+      supplier: fields[6] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, QuoteItem obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.productId)
       ..writeByte(1)
@@ -41,7 +42,9 @@ class QuoteItemAdapter extends TypeAdapter<QuoteItem> {
       ..writeByte(4)
       ..write(obj.unitPrice)
       ..writeByte(5)
-      ..write(obj.discount);
+      ..write(obj.discount)
+      ..writeByte(6)
+      ..write(obj.supplier);
   }
 
   @override
