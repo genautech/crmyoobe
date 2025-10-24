@@ -28,6 +28,9 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
   late TextEditingController _notesController;
   late TextEditingController _campaignNameController;
   late TextEditingController _supplierNameController;
+  late TextEditingController _nfFornecedorController;
+  late TextEditingController _nfVendaController;
+  late TextEditingController _paymentLinkController;
 
   @override
   void initState() {
@@ -35,6 +38,9 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
     _notesController = TextEditingController(text: widget.order?.notes ?? '');
     _campaignNameController = TextEditingController(text: widget.order?.campaignName ?? '');
     _supplierNameController = TextEditingController(text: widget.order?.supplierName ?? '');
+    _nfFornecedorController = TextEditingController(text: widget.order?.nfFornecedor ?? '');
+    _nfVendaController = TextEditingController(text: widget.order?.nfVenda ?? '');
+    _paymentLinkController = TextEditingController(text: widget.order?.paymentLink ?? '');
     
     if (widget.order != null) {
       _items = List.from(widget.order!.items);
@@ -53,6 +59,9 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
     _notesController.dispose();
     _campaignNameController.dispose();
     _supplierNameController.dispose();
+    _nfFornecedorController.dispose();
+    _nfVendaController.dispose();
+    _paymentLinkController.dispose();
     super.dispose();
   }
 
@@ -382,6 +391,37 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
                         prefixIcon: Icon(Icons.local_shipping),
                         hintText: 'Nome do fornecedor',
                       ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _nfFornecedorController,
+                      decoration: const InputDecoration(
+                        labelText: 'NF Fornecedor',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.receipt_long),
+                        hintText: 'Número da nota fiscal do fornecedor',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _nfVendaController,
+                      decoration: const InputDecoration(
+                        labelText: 'NF Venda',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.receipt),
+                        hintText: 'Número da nota fiscal de venda',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _paymentLinkController,
+                      decoration: const InputDecoration(
+                        labelText: 'Link de Pagamento',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.link),
+                        hintText: 'URL do link de pagamento',
+                      ),
+                      keyboardType: TextInputType.url,
                     ),
                     const SizedBox(height: 12),
                     ListTile(
@@ -958,6 +998,10 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
       notes: _notesController.text,
       campaignName: _campaignNameController.text.trim(),
       supplierName: _supplierNameController.text.trim(),
+      nfFornecedor: _nfFornecedorController.text.trim(),
+      nfVenda: _nfVendaController.text.trim(),
+      paymentLink: _paymentLinkController.text.trim(),
+      quoteId: widget.order?.quoteId ?? '',
       createdAt: widget.order?.createdAt ?? DateTime.now(),
     );
 
@@ -1063,6 +1107,10 @@ class _OrderFormScreenState extends State<OrderFormScreen> {
         notes: _notesController.text,
         campaignName: _campaignNameController.text.trim(),
         supplierName: _supplierNameController.text.trim(),
+        nfFornecedor: _nfFornecedorController.text.trim(),
+        nfVenda: _nfVendaController.text.trim(),
+        paymentLink: _paymentLinkController.text.trim(),
+        quoteId: widget.order?.quoteId ?? '',
         createdAt: widget.order?.createdAt ?? DateTime.now(),
       );
 

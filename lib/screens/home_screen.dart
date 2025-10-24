@@ -5,6 +5,7 @@ import '../providers/customer_provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/order_provider.dart';
 import '../providers/quote_provider.dart';
+import '../providers/production_order_provider.dart';
 import 'customers/customers_list_screen.dart';
 import 'tasks/tasks_list_screen.dart';
 import 'orders/orders_list_screen.dart';
@@ -13,6 +14,7 @@ import 'products/products_list_screen.dart';
 import 'production/production_orders_list_screen.dart';
 import 'notifications_screen.dart';
 import 'settings_screen.dart';
+import 'help_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -41,6 +43,18 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Yoobe CRM'),
         elevation: 2,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: 'Ajuda',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const HelpScreen(),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {
@@ -124,6 +138,7 @@ class DashboardTab extends StatelessWidget {
     final taskProvider = context.watch<TaskProvider>();
     final orderProvider = context.watch<OrderProvider>();
     final quoteProvider = context.watch<QuoteProvider>();
+    final productionProvider = context.watch<ProductionOrderProvider>();
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -226,6 +241,24 @@ class DashboardTab extends StatelessWidget {
               ],
             ),
 
+            const SizedBox(height: 32),
+
+            // Active Productions Widget
+            Row(
+              children: [
+                Icon(Icons.factory_rounded, color: Theme.of(context).primaryColor),
+                const SizedBox(width: 8),
+                Text(
+                  'Produções em Andamento',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _ActiveProductionsWidget(productionProvider: productionProvider),
+            
             const SizedBox(height: 32),
             
             // CRM Timeline Section
@@ -757,6 +790,290 @@ class _TimelineItem extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// Active Productions Widget
+class _ActiveProductionsWidget extends StatelessWidget {
+  final ProductionOrderProvider productionProvider;
+
+  const _ActiveProductionsWidget({required this.productionProvider});
+
+  @override
+  Widget build(BuildContext context) {
+    // Get active productions (not dispatched)
+    final activeProductions = productionProvider.productionOrders
+        .where((po) => po.status != 'produtoDespachado')
+        .toList();
+
+    // Sort by creation date (newest first)
+    activeProductions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    if (activeProductions.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Center(
+            child: Column(
+              children: [
+                Icon(Icons.factory_outlined, size: 64, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
+                Text(
+                  'Nenhuma produção em andamento',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: activeProductions.take(5).map((production) {
+        final statusColor = _getProductionStatusColor(production.status);
+        final daysUntilDeadline = production.deliveryDeadline != null
+            ? production.deliveryDeadline!.difference(DateTime.now()).inDays
+            : null;
+        
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: InkWell(
+            onTap: () {
+              // Navigate to production details
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ProductionOrdersListScreen(),
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.factory, color: statusColor, size: 24),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              production.customerName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'PO: ${production.productionOrderNumber}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: statusColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: statusColor, width: 1.5),
+                        ),
+                        child: Text(
+                          _getProductionStatusLabel(production.status),
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _InfoChip(
+                          icon: Icons.inventory_2_outlined,
+                          label: '${production.items.length} ${production.items.length == 1 ? 'item' : 'itens'}',
+                        ),
+                      ),
+                      if (production.campaignName.isNotEmpty)
+                        Expanded(
+                          child: _InfoChip(
+                            icon: Icons.campaign,
+                            label: production.campaignName,
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (production.deliveryDeadline != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: daysUntilDeadline! < 0
+                            ? Colors.red.withValues(alpha: 0.1)
+                            : daysUntilDeadline < 7
+                                ? Colors.orange.withValues(alpha: 0.1)
+                                : Colors.blue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: daysUntilDeadline < 0
+                              ? Colors.red
+                              : daysUntilDeadline < 7
+                                  ? Colors.orange
+                                  : Colors.blue,
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            daysUntilDeadline < 0 ? Icons.error : Icons.event_available,
+                            size: 16,
+                            color: daysUntilDeadline < 0
+                                ? Colors.red
+                                : daysUntilDeadline < 7
+                                    ? Colors.orange
+                                    : Colors.blue,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            daysUntilDeadline < 0
+                                ? 'Atrasado ${-daysUntilDeadline} ${-daysUntilDeadline == 1 ? 'dia' : 'dias'}'
+                                : daysUntilDeadline == 0
+                                    ? 'Entrega HOJE'
+                                    : 'Entrega em $daysUntilDeadline ${daysUntilDeadline == 1 ? 'dia' : 'dias'}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: daysUntilDeadline < 0
+                                  ? Colors.red
+                                  : daysUntilDeadline < 7
+                                      ? Colors.orange
+                                      : Colors.blue,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            DateFormat('dd/MM/yyyy').format(production.deliveryDeadline!),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Color _getProductionStatusColor(String status) {
+    switch (status) {
+      case 'ocCriada':
+        return const Color(0xFF6366F1);
+      case 'produtoPago':
+        return const Color(0xFF10B981);
+      case 'producaoIniciada':
+        return const Color(0xFF3B82F6);
+      case 'amostraSolicitada':
+        return const Color(0xFFF59E0B);
+      case 'amostraRecebida':
+        return const Color(0xFF8B5CF6);
+      case 'produtoAprovado':
+        return const Color(0xFF10B981);
+      case 'produtoRejeitado':
+        return const Color(0xFFEF4444);
+      case 'produtoEmProducao':
+        return const Color(0xFF0EA5E9);
+      case 'produtoDespachado':
+        return const Color(0xFF22C55E);
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getProductionStatusLabel(String status) {
+    switch (status) {
+      case 'ocCriada':
+        return 'OC Criada';
+      case 'produtoPago':
+        return 'Pago';
+      case 'producaoIniciada':
+        return 'Iniciada';
+      case 'amostraSolicitada':
+        return 'Amostra Solicitada';
+      case 'amostraRecebida':
+        return 'Amostra Recebida';
+      case 'produtoAprovado':
+        return 'Aprovado';
+      case 'produtoRejeitado':
+        return 'Rejeitado';
+      case 'produtoEmProducao':
+        return 'Em Produção';
+      case 'produtoDespachado':
+        return 'Despachado';
+      default:
+        return status;
+    }
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _InfoChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: Colors.grey.shade600),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade700,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }
