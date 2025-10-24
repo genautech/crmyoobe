@@ -11,7 +11,6 @@ import 'providers/quote_provider.dart';
 import 'providers/product_provider.dart';
 import 'providers/production_order_provider.dart';
 import 'providers/supplier_provider.dart';
-import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/production/production_dashboard_screen.dart';
 
@@ -39,15 +38,8 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  bool _isInitialized = false;
 
   @override
   Widget build(BuildContext context) {
@@ -158,15 +150,7 @@ class _MyAppState extends State<MyApp> {
             height: 70,
           ),
         ),
-        home: _isInitialized
-            ? const HomeScreen()
-            : SplashScreen(
-                onInitializationComplete: () {
-                  setState(() {
-                    _isInitialized = true;
-                  });
-                },
-              ),
+        home: const HomeScreen(),
       ),
     );
   }
