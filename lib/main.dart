@@ -17,7 +17,10 @@ import 'screens/production/production_dashboard_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Firebase
+  // Initialize Hive storage (local storage)
+  await StorageService.init();
+  
+  // Initialize Firebase (optional - app works without it)
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -27,13 +30,10 @@ void main() async {
     }
   } catch (e) {
     if (kDebugMode) {
-      debugPrint('⚠️ Erro ao inicializar Firebase: $e');
-      debugPrint('📱 App continuará funcionando com Hive local');
+      debugPrint('⚠️ Firebase não inicializado: $e');
+      debugPrint('📱 App funcionando com Hive local');
     }
   }
-  
-  // Initialize Hive storage (fallback local storage)
-  await StorageService.init();
   
   runApp(const MyApp());
 }
